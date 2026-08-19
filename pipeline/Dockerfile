@@ -1,26 +1,19 @@
 # Start with image
-FROM python:3.13.10-slim
-
-# Copy uv binary from official uv image (multi-stage build pattern)
+FROM python:3.13.11-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
 
-# Set working directory
-WORKDIR /app
+WORKDIR /code
+ENV PATH="/code/.venv/bin:$PATH"
 
-# Add virtual environment to PATH so we can use installed packages
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Copy dependency files into image
-COPY "pyproject.toml" "uv.lock" ".python-version" ./
-
-# Install dependencies from lock file (ensures reproducible builds).
+COPY pyproject.toml .python-version uv.lock ./
+# Dependencies are all inside the pyproject.toml
 RUN uv sync --locked
+# We install all dependencies from lock file (ensures reproducible builds)
 
-# Copying of dependency files + running uv sync prior to copying of application code helps improved image layer caching
 
-# Copy application code
-COPY pipeline.py pipeline.py
+COPY ingest_data.py .
+# This used to be pipeline.py
 
-# Set entry point
-# See notes: 'uv run' is preferred, even if dropping it can still work, noting that we already specified the ENV PATH
-ENTRYPOINT ["uv", "run", "python", "pipeline.py"]
+ENTRYPOINT ["uv", "run", "python", "ingest_data.py"]
+# Entrypoint used to be just ["python", "pipeline.py"]
+# Our new entrypoint makes it so the ingestion script runs first thing
